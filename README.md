@@ -11,6 +11,12 @@ definidas em [`.github/workflows/security.yml`](.github/workflows/security.yml).
 | `semgrep` | SAST | Código vulnerável, como `eval()` com entrada do usuário |
 | `trivy` | Scan de imagem | Imagem Docker com CVE **CRITICAL** que já tem correção (roda só se as duas primeiras passarem) |
 
+Quando uma barreira falha, o próprio job transforma cada achado numa **anotação** (`::error`) com arquivo, linha,
+regra ou CVE, visível direto no resumo da execução na aba Actions.
+
+Todas as actions de terceiros estão **fixadas por SHA de commit** (não por tag), lição do ataque de supply chain
+ao `trivy-action` em março/2026 (CVE-2026-33634), quando tags foram reescritas para apontar para código malicioso.
+
 ## Estrutura
 
 ```

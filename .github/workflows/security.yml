@@ -9,12 +9,16 @@ jobs:
   gitleaks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Anota segredos encontrados
+        if: failure()
+        run: |
+          jq -r '.runs[0].results[] | "::error file=\(.locations[0].physicalLocation.artifactLocation.uri),line=\(.locations[0].physicalLocation.region.startLine),title=Gitleaks - \(.ruleId)::\(.message.text) (commit \(.partialFingerprints.commitSha[0:7]))"' results.sarif
 
   # Barreira 2 - SAST: procura padrões vulneráveis no código-fonte (ex.: eval)
   semgrep:
@@ -22,24 +26,21 @@ jobs:
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - run: semgrep ci --config auto --text-output=semgrep.txt
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - run: semgrep ci --config auto --json-output=semgrep.json
         env:
           SEMGREP_RULES: p/default
-      - name: Resumo do Semgrep
-        if: always()
+      - name: Anota código vulnerável encontrado
+        if: failure()
         run: |
-          echo '### Semgrep (SAST)' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          cat semgrep.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo 'Sem saída' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.results[] | "::error file=\(.path),line=\(.start.line),title=Semgrep - \(.check_id | split(".") | last)::\(.extra.message | gsub("\n"; " "))"' semgrep.json
 
   # Barreira 3 - Scan de imagem: builda a imagem e barra CVE CRITICAL com correção disponível
   trivy:
     runs-on: ubuntu-latest
     needs: [gitleaks, semgrep]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Build da imagem
         run: docker build -t cp5-site:${{ github.sha }} .
       - name: Trivy scan
@@ -47,15 +48,13 @@ jobs:
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           image-ref: cp5-site:${{ github.sha }}
-          format: table
-          output: trivy.txt
+          format: json
+          output: trivy.json
           severity: CRITICAL
           ignore-unfixed: true
           exit-code: '1'
-      - name: Resumo do Trivy
+      - name: Relatório do Trivy
         if: always()
         run: |
-          echo '### Trivy (imagem) - severidade CRITICAL' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          cat trivy.txt | tee -a "$GITHUB_STEP_SUMMARY" || echo 'Sem saída' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.Results[] | "Alvo: \(.Target) | CVEs CRITICAL corrigíveis: \(.Vulnerabilities // [] | length)"' trivy.json
+          jq -r '.Results[].Vulnerabilities // [] | .[] | "::error title=Trivy - \(.VulnerabilityID) (\(.Severity))::\(.PkgName) \(.InstalledVersion) vulnerável - corrigido em \(.FixedVersion). \(.Title)"' trivy.json
