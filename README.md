@@ -1,6 +1,13 @@
 # CP05 - O Pipeline DevSecOps Completo
 
-**Aluno:** Nikolas Rodrigues Moura dos Santos | **RM:** 551566 | **Turma:** 4ESPW
+Trabalho realizado em grupo:
+
+| Integrante | RM |
+|---|---|
+| Guilherme Rocha Bianchini | RM97974 |
+| Nikolas Rodrigues Moura dos Santos | RM551566 |
+| Thiago Jardim de Oliveira | RM551624 |
+| Rodrigo Brasileiro | RM98952 |
 
 Pipeline de referência da Arcanjo SA: todo `push` e `pull_request` passa por três barreiras de segurança
 definidas em [`.github/workflows/security.yml`](.github/workflows/security.yml).
