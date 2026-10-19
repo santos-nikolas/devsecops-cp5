@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkpoint 05 - Arcanjo SA</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Checkpoint 05 - O Pipeline DevSecOps Completo</h1>
+        <p><strong>Nome:</strong> Nikolas Rodrigues Moura dos Santos</p>
+        <p><strong>RM:</strong> 551566</p>
+        <p><strong>Turma:</strong> 4ESPW</p>
+
+        <h2>O incidente</h2>
+        <p>Uma chave de API da Arcanjo SA vazou num commit público. A diretoria decretou: pipeline de segurança obrigatório
+            em todos os repositórios. Este repositório é o <strong>pipeline de referência</strong>.</p>
+
+        <h2>As três barreiras do pipeline</h2>
+        <div class="cards">
+            <div class="card">
+                <h3>1. Gitleaks</h3>
+                <p><em>Secret scanning.</em> Varre o histórico do Git atrás de senhas, tokens e chaves de nuvem. Se achar, o pipeline falha.</p>
+            </div>
+            <div class="card">
+                <h3>2. Semgrep</h3>
+                <p><em>SAST.</em> Lê o código-fonte procurando padrões vulneráveis, como <code>eval()</code> com entrada do usuário.</p>
+            </div>
+            <div class="card">
+                <h3>3. Trivy</h3>
+                <p><em>Scan de imagem.</em> Builda a imagem Docker e bloqueia se ela tiver CVE <strong>CRITICAL</strong> com correção disponível.</p>
+            </div>
+        </div>
+
+        <h2>Calculadora de horas do sprint</h2>
+        <p>Digite uma expressão simples (ex.: <code>8 * 5 - 3</code>):</p>
+        <div class="calc">
+            <input id="expressao" type="text" placeholder="8 * 5 - 3" autocomplete="off">
+            <button id="calcular" type="button">Calcular</button>
+        </div>
+        <p id="resultado"></p>
+    </div>
+    <script src="calculadora.js"></script>
+</body>
+</html>

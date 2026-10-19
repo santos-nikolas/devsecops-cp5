@@ -1,0 +1,61 @@
+name: Security Pipeline
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  # Barreira 1 - Secret scanning: varre o histórico do Git atrás de chaves e senhas
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Barreira 2 - SAST: procura padrões vulneráveis no código-fonte (ex.: eval)
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: semgrep ci --config auto --text-output=semgrep.txt
+        env:
+          SEMGREP_RULES: p/default
+      - name: Resumo do Semgrep
+        if: always()
+        run: |
+          echo '### Semgrep (SAST)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat semgrep.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo 'Sem saída' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  # Barreira 3 - Scan de imagem: builda a imagem e barra CVE CRITICAL com correção disponível
+  trivy:
+    runs-on: ubuntu-latest
+    needs: [gitleaks, semgrep]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build da imagem
+        run: docker build -t cp5-site:${{ github.sha }} .
+      - name: Trivy scan
+        # v0.35.0 fixada por SHA: única versão não afetada pelo ataque de supply chain de mar/2026 (CVE-2026-33634)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: cp5-site:${{ github.sha }}
+          format: table
+          output: trivy.txt
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Resumo do Trivy
+        if: always()
+        run: |
+          echo '### Trivy (imagem) - severidade CRITICAL' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat trivy.txt | tee -a "$GITHUB_STEP_SUMMARY" || echo 'Sem saída' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
